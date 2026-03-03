@@ -1,0 +1,1876 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>AI-Based Text-to-Speech System for Human-Like Voice Synthesis</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    .section-card {
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+    
+    .section-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .section-card:hover::before,
+    .section-card:active::before {
+      left: 100%;
+    }
+    
+    .section-card:hover,
+    .section-card:active {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+    }
+    
+    @media (hover: none) {
+      .section-card:active {
+        transform: scale(0.98);
+      }
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      animation: fadeIn 0.3s;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+    }
+    
+    .modal-content {
+      background: white;
+      width: 100%;
+      max-width: 900px;
+      max-height: 90%;
+      overflow-y: auto;
+      border-radius: 20px;
+      animation: slideUp 0.3s;
+      position: relative;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    @keyframes slideUp {
+      from { transform: translateY(50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .close-btn {
+      position: sticky;
+      top: 0;
+      right: 0;
+      background: #ef4444;
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      z-index: 10;
+      float: right;
+      margin: 15px 15px 0 0;
+      transition: all 0.3s;
+      touch-action: manipulation;
+    }
+    
+    .close-btn:hover,
+    .close-btn:active {
+      background: #dc2626;
+      transform: rotate(90deg);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      transition: all 0.3s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .btn-primary:hover,
+    .btn-primary:active {
+      transform: scale(1.05);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-secondary {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      transition: all 0.3s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    .btn-secondary:hover,
+    .btn-secondary:active {
+      transform: scale(1.05);
+      box-shadow: 0 10px 20px rgba(245, 87, 108, 0.3);
+    }
+    
+    .recording {
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .word-item {
+      transition: all 0.3s;
+      touch-action: manipulation;
+    }
+    
+    .word-item:hover,
+    .word-item:active {
+      background: #f3f4f6;
+      transform: translateX(5px);
+    }
+    
+    .loading-spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .gradient-bg {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .gradient-red {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .gradient-green {
+      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+    
+    .gradient-orange {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+    
+    .gradient-blue {
+      background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+    }
+    
+    .gradient-pink {
+      background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+    }
+
+    .difficulty-btn {
+      background: linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%);
+      color: #666;
+      border: 2px solid #ddd;
+      transition: all 0.3s;
+      touch-action: manipulation;
+    }
+    
+    .difficulty-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+    }
+    
+    .difficulty-btn:hover,
+    .difficulty-btn:active {
+      transform: scale(1.05);
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+    
+    .file-upload-btn {
+      display: inline-block;
+      padding: 12px 24px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 10px;
+      transition: all 0.3s;
+      touch-action: manipulation;
+    }
+    
+    .file-upload-btn:hover,
+    .file-upload-btn:active {
+      transform: scale(1.05);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 768px) {
+      .modal-content {
+        max-height: 95%;
+        margin: 5px;
+      }
+      
+      textarea, input, select {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+      }
+      
+      .section-card:active::before {
+        left: 100%;
+      }
+    }
+
+    /* Improved touch targets for mobile */
+    button, .section-card, .word-item {
+      min-height: 44px;
+    }
+
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full w-full" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+  <div class="w-full h-full overflow-auto p-4 md:p-8"><!-- Header -->
+   <div class="text-center mb-8 md:mb-12">
+    <h1 id="appTitle" class="text-3xl md:text-5xl font-bold text-white mb-2 md:mb-4">AI-Based Text-to-Speech System for Human-Like Voice Synthesis</h1>
+    <p class="text-white text-sm md:text-lg opacity-90">Your complete AI-powered speech and text toolkit</p>
+   </div><!-- Main Grid -->
+   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 max-w-7xl mx-auto"><!-- Image Upload Scanner Card -->
+    <div class="section-card bg-white rounded-2xl p-6 md:p-8 shadow-xl" onclick="openModal('ocrModal')">
+     <div class="text-center">
+      <div class="gradient-red w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6"><i class="fas fa-image text-2xl md:text-4xl text-white"></i>
+      </div>
+      <h2 id="ocrSectionTitle" class="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">Image Upload Scanner</h2>
+      <p class="text-sm md:text-base text-gray-600">Extract text from images</p>
+     </div>
+    </div><!-- Text to Speech Card -->
+    <div class="section-card bg-white rounded-2xl p-6 md:p-8 shadow-xl" onclick="openModal('ttsModal')">
+     <div class="text-center">
+      <div class="gradient-green w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6"><i class="fas fa-volume-up text-2xl md:text-4xl text-white"></i>
+      </div>
+      <h2 id="ttsSectionTitle" class="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">Text to Speech</h2>
+      <p class="text-sm md:text-base text-gray-600">Convert text to natural speech</p>
+     </div>
+    </div><!-- Voice Typing Card -->
+    <div class="section-card bg-white rounded-2xl p-6 md:p-8 shadow-xl" onclick="openModal('voiceModal')">
+     <div class="text-center">
+      <div class="gradient-orange w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6"><i class="fas fa-microphone text-2xl md:text-4xl text-white"></i>
+      </div>
+      <h2 id="voiceSectionTitle" class="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">Voice Typing</h2>
+      <p class="text-sm md:text-base text-gray-600">Speak and convert to text</p>
+     </div>
+    </div><!-- Language Translation Card -->
+    <div class="section-card bg-white rounded-2xl p-6 md:p-8 shadow-xl" onclick="openModal('translatorModal')">
+     <div class="text-center">
+      <div class="gradient-blue w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6"><i class="fas fa-language text-2xl md:text-4xl text-white"></i>
+      </div>
+      <h2 id="translationSectionTitle" class="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">Language Translation</h2>
+      <p class="text-sm md:text-base text-gray-600">Translate between 10 languages</p>
+     </div>
+    </div><!-- Paragraph Translation Card -->
+    <div class="section-card bg-white rounded-2xl p-6 md:p-8 shadow-xl" onclick="openModal('paragraphModal')">
+     <div class="text-center">
+      <div class="gradient-pink w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6"><i class="fas fa-paragraph text-2xl md:text-4xl text-white"></i>
+      </div>
+      <h2 id="paragraphSectionTitle" class="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">Paragraph Translation</h2>
+      <p class="text-sm md:text-base text-gray-600">Translate paragraphs with AI</p>
+     </div>
+    </div><!-- Dictionary Card -->
+    <div class="section-card bg-white rounded-2xl p-6 md:p-8 shadow-xl" onclick="openModal('dictionaryModal')">
+     <div class="text-center">
+      <div style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);" class="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6"><i class="fas fa-book text-2xl md:text-4xl text-white"></i>
+      </div>
+      <h2 id="dictionarySectionTitle" class="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">Dictionary</h2>
+      <p class="text-sm md:text-base text-gray-600">Learn 150+ words in 10 languages</p>
+     </div>
+    </div><!-- Typing Practice Card -->
+    <div class="section-card bg-white rounded-2xl p-6 md:p-8 shadow-xl" onclick="openModal('typingModal')">
+     <div class="text-center">
+      <div style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);" class="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-4 md:mb-6"><i class="fas fa-keyboard text-2xl md:text-4xl text-white"></i>
+      </div>
+      <h2 id="typingSectionTitle" class="text-xl md:text-2xl font-bold text-gray-800 mb-2 md:mb-3">Typing Practice</h2>
+      <p class="text-sm md:text-base text-gray-600">Practice multilingual typing skills</p>
+     </div>
+    </div>
+   </div>
+  </div><!-- Text to Speech Modal -->
+  <div id="ttsModal" class="modal">
+   <div class="modal-content"><button class="close-btn" onclick="closeModal('ttsModal')">×</button>
+    <div class="p-6 md:p-8">
+     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6 text-center">Text to Speech</h2><textarea id="ttsText" class="w-full h-32 md:h-40 p-3 md:p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none text-sm md:text-base" placeholder="Type or paste your text here..."></textarea>
+     <div class="mt-4 md:mt-6 grid grid-cols-2 gap-3 md:gap-4">
+      <div><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">Language</label> <select id="ttsLang" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base"> <option value="en-US">English</option> <option value="hi-IN">Hindi</option> <option value="te-IN">Telugu</option> <option value="ta-IN">Tamil</option> <option value="kn-IN">Kannada</option> <option value="es-ES">Spanish</option> <option value="fr-FR">French</option> <option value="de-DE">German</option> <option value="ja-JP">Japanese</option> <option value="zh-CN">Chinese</option> </select>
+      </div>
+      <div><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">Speed</label> <select id="ttsRate" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base"> <option value="0.5">Slow</option> <option value="1" selected>Normal</option> <option value="1.5">Fast</option> </select>
+      </div>
+     </div>
+     <div class="mt-4 md:mt-6 flex gap-3 md:gap-4"><button onclick="speakTTS()" class="flex-1 btn-primary text-white py-3 md:py-4 rounded-xl font-semibold text-sm md:text-base"> <i class="fas fa-play mr-2"></i> Speak </button> <button onclick="stopTTS()" class="flex-1 btn-secondary text-white py-3 md:py-4 rounded-xl font-semibold text-sm md:text-base"> <i class="fas fa-stop mr-2"></i> Stop </button>
+     </div>
+    </div>
+   </div>
+  </div><!-- OCR Modal -->
+  <div id="ocrModal" class="modal">
+   <div class="modal-content"><button class="close-btn" onclick="closeModal('ocrModal')">×</button>
+    <div class="p-6 md:p-8">
+     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6 text-center">Image Upload Scanner</h2>
+     <div class="text-center mb-4 md:mb-6"><label for="imageUpload" class="file-upload-btn"> <i class="fas fa-upload mr-2"></i> Choose Image </label> <input type="file" id="imageUpload" accept="image/*" onchange="processImage()">
+     </div>
+     <div id="ocrLoading" class="hidden">
+      <div class="loading-spinner"></div>
+      <p class="text-center text-gray-600 text-sm md:text-base">Processing image...</p>
+     </div>
+     <div id="imagePreview" class="mb-4 md:mb-6 text-center hidden"><img id="previewImg" class="max-w-full h-auto max-h-64 md:max-h-80 mx-auto rounded-lg shadow-lg">
+     </div><textarea id="ocrText" class="w-full h-32 md:h-40 p-3 md:p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none text-sm md:text-base" placeholder="Extracted text will appear here..." readonly></textarea>
+     <div class="mt-4 md:mt-6"><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">Language</label> <select id="ocrLang" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base"> <option value="en-US">English</option> <option value="hi-IN">Hindi</option> <option value="te-IN">Telugu</option> <option value="ta-IN">Tamil</option> <option value="kn-IN">Kannada</option> <option value="es-ES">Spanish</option> <option value="fr-FR">French</option> <option value="de-DE">German</option> <option value="ja-JP">Japanese</option> <option value="zh-CN">Chinese</option> </select>
+     </div>
+     <div class="mt-4 md:mt-6 flex gap-3 md:gap-4"><button onclick="speakOCR()" class="flex-1 btn-primary text-white py-3 md:py-4 rounded-xl font-semibold text-sm md:text-base"> <i class="fas fa-play mr-2"></i> Speak </button> <button onclick="stopTTS()" class="flex-1 btn-secondary text-white py-3 md:py-4 rounded-xl font-semibold text-sm md:text-base"> <i class="fas fa-stop mr-2"></i> Stop </button>
+     </div>
+    </div>
+   </div>
+  </div><!-- Voice Typing Modal -->
+  <div id="voiceModal" class="modal">
+   <div class="modal-content"><button class="close-btn" onclick="closeModal('voiceModal')">×</button>
+    <div class="p-6 md:p-8">
+     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6 text-center">Voice Typing</h2>
+     <div class="mb-4 md:mb-6"><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">Language</label> <select id="voiceLang" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base"> <option value="en-US">English</option> <option value="hi-IN">Hindi</option> <option value="te-IN">Telugu</option> <option value="ta-IN">Tamil</option> <option value="kn-IN">Kannada</option> <option value="es-ES">Spanish</option> <option value="fr-FR">French</option> <option value="de-DE">German</option> <option value="ja-JP">Japanese</option> <option value="zh-CN">Chinese</option> </select>
+     </div>
+     <div class="text-center mb-4 md:mb-6"><button id="voiceBtn" onclick="toggleVoiceRecording()" class="btn-primary text-white py-4 md:py-6 px-8 md:px-12 rounded-full font-semibold text-base md:text-lg"> <i class="fas fa-microphone mr-2 text-xl md:text-2xl"></i> Start Recording </button>
+      <p id="voiceStatus" class="mt-3 md:mt-4 text-xs md:text-sm text-gray-600"></p>
+     </div><textarea id="voiceText" class="w-full h-32 md:h-40 p-3 md:p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none text-sm md:text-base" placeholder="Your spoken text will appear here..."></textarea>
+     <div class="mt-4 md:mt-6 flex gap-3 md:gap-4"><button onclick="clearVoiceText()" class="flex-1 bg-gray-500 text-white py-3 md:py-4 rounded-xl font-semibold hover:bg-gray-600 transition text-sm md:text-base"> <i class="fas fa-eraser mr-2"></i> Clear </button> <button onclick="copyVoiceText()" class="flex-1 btn-primary text-white py-3 md:py-4 rounded-xl font-semibold text-sm md:text-base"> <i class="fas fa-copy mr-2"></i> Copy </button>
+     </div>
+    </div>
+   </div>
+  </div><!-- Translator Modal -->
+  <div id="translatorModal" class="modal">
+   <div class="modal-content"><button class="close-btn" onclick="closeModal('translatorModal')">×</button>
+    <div class="p-6 md:p-8">
+     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6 text-center">Language Translation</h2>
+     <div class="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+      <div><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">From</label> <select id="fromLang" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base"> <option value="en">English</option> <option value="hi">Hindi</option> <option value="te">Telugu</option> <option value="ta">Tamil</option> <option value="kn">Kannada</option> <option value="es">Spanish</option> <option value="fr">French</option> <option value="de">German</option> <option value="ja">Japanese</option> <option value="zh">Chinese</option> </select>
+      </div>
+      <div><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">To</label> <select id="toLang" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base"> <option value="en">English</option> <option value="hi">Hindi</option> <option value="te">Telugu</option> <option value="ta">Tamil</option> <option value="kn">Kannada</option> <option value="es">Spanish</option> <option value="fr">French</option> <option value="de">German</option> <option value="ja">Japanese</option> <option value="zh">Chinese</option> </select>
+      </div>
+     </div><textarea id="inputText" class="w-full h-24 md:h-32 p-3 md:p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none mb-3 md:mb-4 text-sm md:text-base" placeholder="Enter text to translate..."></textarea> <button onclick="translateText()" class="w-full btn-primary text-white py-3 md:py-4 rounded-xl font-semibold mb-3 md:mb-4 text-sm md:text-base"> <i class="fas fa-exchange-alt mr-2"></i> Translate </button>
+     <div id="translationResult" class="w-full min-h-24 md:min-h-32 p-3 md:p-4 border-2 border-gray-300 rounded-xl bg-gray-50 mb-3 md:mb-4 text-sm md:text-base" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;">
+      Translation will appear here...
+     </div><button onclick="speakTranslation()" class="w-full btn-secondary text-white py-3 md:py-4 rounded-xl font-semibold text-sm md:text-base"> <i class="fas fa-volume-up mr-2"></i> Speak Translation </button>
+     <div class="mt-6 md:mt-8">
+      <h3 class="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4">Quick Translations</h3>
+      <div class="max-h-64 md:max-h-96 overflow-y-auto">
+       <div id="phrasesList" class="space-y-2"></div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div><!-- Dictionary Modal -->
+  <div id="dictionaryModal" class="modal">
+   <div class="modal-content"><button class="close-btn" onclick="closeModal('dictionaryModal')">×</button>
+    <div class="p-6 md:p-8">
+     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6 text-center">Dictionary</h2>
+     <div class="mb-4 md:mb-6"><input type="text" id="searchWord" class="w-full p-3 md:p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none text-sm md:text-base" placeholder="Search words..." onkeyup="filterDictionary()">
+     </div>
+     <div class="mb-4 md:mb-6"><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">Select Language</label> <select id="dictLang" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base" onchange="updateDictionary()"> <option value="en-US">English</option> <option value="hi-IN">Hindi</option> <option value="te-IN">Telugu</option> <option value="ta-IN">Tamil</option> <option value="kn-IN">Kannada</option> <option value="es-ES">Spanish</option> <option value="fr-FR">French</option> <option value="de-DE">German</option> <option value="ja-JP">Japanese</option> <option value="zh-CN">Chinese</option> </select>
+     </div>
+     <div id="dictionaryList" class="max-h-96 md:max-h-[500px] overflow-y-auto space-y-2"></div>
+    </div>
+   </div>
+  </div><!-- Paragraph Translator Modal -->
+  <div id="paragraphModal" class="modal">
+   <div class="modal-content"><button class="close-btn" onclick="closeModal('paragraphModal')">×</button>
+    <div class="p-6 md:p-8">
+     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6 text-center">Paragraph Translation</h2>
+     <div class="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
+      <div><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">From Language</label> <select id="paraFromLang" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base"> <option value="en">English</option> <option value="hi">Hindi</option> <option value="te">Telugu</option> <option value="ta">Tamil</option> <option value="kn">Kannada</option> <option value="es">Spanish</option> <option value="fr">French</option> <option value="de">German</option> <option value="ja">Japanese</option> <option value="zh">Chinese</option> </select>
+      </div>
+      <div><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">To Language</label> <select id="paraToLang" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base"> <option value="en">English</option> <option value="hi">Hindi</option> <option value="te">Telugu</option> <option value="ta">Tamil</option> <option value="kn">Kannada</option> <option value="es">Spanish</option> <option value="fr">French</option> <option value="de">German</option> <option value="ja">Japanese</option> <option value="zh">Chinese</option> </select>
+      </div>
+     </div>
+     <div class="mb-3 md:mb-4"><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">Enter Text/Paragraph</label> <textarea id="paragraphInput" class="w-full h-32 md:h-40 p-3 md:p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none text-sm md:text-base" placeholder="Type or paste your paragraph here..."></textarea>
+      <p class="text-xs text-gray-500 mt-1"><span id="charCount">0</span> characters</p>
+     </div><button onclick="translateParagraph()" class="w-full btn-primary text-white py-3 md:py-4 rounded-xl font-semibold mb-3 md:mb-4 text-sm md:text-base"> <i class="fas fa-language mr-2"></i> Translate </button>
+     <div id="paragraphLoading" class="hidden mb-4">
+      <div class="loading-spinner"></div>
+      <p class="text-center text-gray-600 text-sm md:text-base">Translating...</p>
+     </div>
+     <div class="mb-3 md:mb-4"><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">Translation</label>
+      <div id="paragraphOutput" class="w-full min-h-32 md:min-h-40 p-3 md:p-4 border-2 border-gray-300 rounded-xl bg-gray-50 text-sm md:text-base" style="user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;">
+       Translation will appear here...
+      </div>
+     </div><button onclick="speakParagraph()" class="w-full btn-secondary text-white py-3 md:py-4 rounded-xl font-semibold text-sm md:text-base"> <i class="fas fa-volume-up mr-2"></i> Speak Translation </button>
+    </div>
+   </div>
+  </div><!-- Typing Practice Modal -->
+  <div id="typingModal" class="modal">
+   <div class="modal-content"><button class="close-btn" onclick="closeModal('typingModal')">×</button>
+    <div class="p-6 md:p-8">
+     <h2 class="text-2xl md:text-3xl font-bold text-gray-800 mb-4 md:mb-6 text-center">Typing Practice Game</h2><!-- Language Selection -->
+     <div class="mb-4 md:mb-6"><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">Select Language</label> <select id="typingLang" class="w-full p-2 md:p-3 border-2 border-gray-300 rounded-lg focus:border-purple-500 focus:outline-none text-sm md:text-base" onchange="resetTypingGame()"> <option value="en">English</option> <option value="hi">Hindi (हिंदी)</option> <option value="te">Telugu (తెలుగు)</option> <option value="ta">Tamil (தமிழ்)</option> <option value="kn">Kannada (ಕನ್ನಡ)</option> <option value="es">Spanish (Español)</option> <option value="fr">French (Français)</option> <option value="de">German (Deutsch)</option> <option value="ja">Japanese (日本語)</option> <option value="zh">Chinese (中文)</option> </select>
+     </div><!-- Difficulty Selection -->
+     <div class="mb-4 md:mb-6"><label class="block text-xs md:text-sm font-semibold text-gray-700 mb-2">Difficulty Level</label>
+      <div class="grid grid-cols-2 gap-3"><button onclick="setDifficulty('words')" id="wordsBtn" class="difficulty-btn active py-2 md:py-3 rounded-lg font-semibold text-sm md:text-base"> <i class="fas fa-font mr-2"></i> Words </button> <button onclick="setDifficulty('sentences')" id="sentencesBtn" class="difficulty-btn py-2 md:py-3 rounded-lg font-semibold text-sm md:text-base"> <i class="fas fa-align-left mr-2"></i> Sentences </button>
+      </div>
+     </div><!-- Score Display -->
+     <div class="grid grid-cols-3 gap-3 mb-4 md:mb-6">
+      <div class="bg-gradient-to-br from-green-400 to-green-600 rounded-lg p-3 md:p-4 text-white text-center">
+       <p class="text-xs md:text-sm opacity-90">Score</p>
+       <p id="typingScore" class="text-xl md:text-3xl font-bold">0</p>
+      </div>
+      <div class="bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg p-3 md:p-4 text-white text-center">
+       <p class="text-xs md:text-sm opacity-90">Correct</p>
+       <p id="correctCount" class="text-xl md:text-3xl font-bold">0</p>
+      </div>
+      <div class="bg-gradient-to-br from-red-400 to-red-600 rounded-lg p-3 md:p-4 text-white text-center">
+       <p class="text-xs md:text-sm opacity-90">Wrong</p>
+       <p id="wrongCount" class="text-xl md:text-3xl font-bold">0</p>
+      </div>
+     </div><!-- Text Display -->
+     <div class="mb-4 md:mb-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 md:p-6 border-2 border-purple-200">
+      <p class="text-xs md:text-sm text-gray-600 mb-2">Type this:</p>
+      <p id="targetText" class="text-lg md:text-2xl font-semibold text-gray-800 text-center" style="line-height: 1.6; word-wrap: break-word;">Select a language and click Start to begin</p>
+     </div><!-- Input Field -->
+     <div class="mb-4 md:mb-6"><input type="text" id="typingInput" class="w-full p-3 md:p-4 border-2 border-gray-300 rounded-xl focus:border-purple-500 focus:outline-none text-sm md:text-lg" placeholder="Start typing here..." disabled autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+     </div><!-- Feedback Message -->
+     <div id="typingFeedback" class="mb-4 text-center text-base md:text-lg font-semibold h-8"></div><!-- Control Buttons -->
+     <div class="grid grid-cols-3 gap-2 md:gap-3"><button onclick="startTypingGame()" id="startTypingBtn" class="btn-primary text-white py-3 md:py-4 rounded-xl font-semibold text-sm md:text-base"> <i class="fas fa-play mr-1"></i> Start </button> <button onclick="listenTypingText()" id="listenBtn" class="bg-blue-500 text-white py-3 md:py-4 rounded-xl font-semibold hover:bg-blue-600 transition text-sm md:text-base" disabled> <i class="fas fa-volume-up mr-1"></i> Listen </button> <button onclick="skipWord()" id="skipBtn" class="bg-orange-500 text-white py-3 md:py-4 rounded-xl font-semibold hover:bg-orange-600 transition text-sm md:text-base" disabled> <i class="fas fa-forward mr-1"></i> Skip </button>
+     </div><!-- Instructions -->
+     <div class="mt-6 bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+      <p class="text-xs md:text-sm text-blue-800"><i class="fas fa-info-circle mr-2"></i> <strong>How to play:</strong> Type the displayed text exactly as shown. Use the <strong>Listen</strong> button to hear the pronunciation. Each correct answer gives you 10 points! Wrong answers don't reduce your score. Practice makes perfect!</p>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      app_title: "AI-Based Text-to-Speech System for Human-Like Voice Synthesis",
+      ocr_section_title: "Image Upload Scanner",
+      tts_section_title: "Text to Speech",
+      voice_section_title: "Voice Typing",
+      translation_section_title: "Language Translation",
+      paragraph_section_title: "Paragraph Translation",
+      dictionary_section_title: "Dictionary",
+      typing_section_title: "Typing Practice"
+    };
+
+    let synth = ('speechSynthesis' in window) ? window.speechSynthesis : null;
+    let currentUtterance = null;
+    let recognition = null;
+    let isRecording = false;
+
+    // Typing Game Variables
+    let typingScore = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let currentTargetText = '';
+    let currentDifficulty = 'words';
+    let isTypingGameActive = false;
+
+    // Typing Practice Content Database (using words and sentences from the project)
+    const typingContent = {
+      en: {
+        words: [
+          "Hello", "Thank you", "Please", "Sorry", "Welcome", "Goodbye",
+          "Yes", "No", "Water", "Food", "House", "Book", "School", "Teacher",
+          "Student", "Mother", "Father", "Brother", "Sister", "Family",
+          "Friend", "Love", "Peace", "Happy", "Today", "Tomorrow", "Morning",
+          "Evening", "Night", "Work", "Study", "Play", "Market", "Hospital",
+          "Temple", "Office", "Home", "City", "Village", "One", "Two", "Three",
+          "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten"
+        ],
+        sentences: [
+          "Good morning", "Good night", "How are you", "What is your name",
+          "I am fine", "Nice to meet you", "See you later", "Take care",
+          "I love you", "I miss you", "Thank you very much",
+          "Have a nice day", "How was your day", "I am going to school",
+          "I need help", "What time is it", "Where are you going",
+          "The food is delicious", "I am tired", "Good luck",
+          "Let us go", "Come here", "Sit down", "Stand up", "Wait here"
+        ]
+      },
+      hi: {
+        words: [
+          "नमस्ते", "धन्यवाद", "कृपया", "माफ़ कीजिए", "स्वागत है",
+          "हाँ", "नहीं", "पानी", "भोजन", "घर", "किताब", "स्कूल",
+          "शिक्षक", "छात्र", "माँ", "पिता", "भाई", "बहन", "परिवार",
+          "दोस्त", "प्यार", "शांति", "खुश", "आज", "कल", "सुबह",
+          "शाम", "रात", "काम", "पढ़ाई", "खेल", "बाज़ार", "अस्पताल",
+          "मंदिर", "कार्यालय", "शहर", "गाँव", "एक", "दो", "तीन"
+        ],
+        sentences: [
+          "सुप्रभात", "शुभ रात्रि", "आप कैसे हैं", "आपका नाम क्या है",
+          "मैं ठीक हूँ", "आपसे मिलकर अच्छा लगा", "फिर मिलेंगे",
+          "ख्याल रखना", "मैं तुमसे प्यार करता हूँ", "बहुत धन्यवाद",
+          "आपका दिन शुभ हो", "मुझे मदद चाहिए", "समय क्या है",
+          "आप कहाँ जा रहे हैं", "खाना स्वादिष्ट है", "मैं थक गया हूँ",
+          "शुभकामनाएं", "चलो चलें", "यहाँ आओ", "बैठ जाओ", "यहाँ रुको"
+        ]
+      },
+      te: {
+        words: [
+          "నమస్కారం", "ధన్యవాదాలు", "దయచేసి", "క్షమించండి", "స్వాగతం",
+          "అవును", "కాదు", "నీరు", "ఆహారం", "ఇల్లు", "పుస్తకం", "పాఠశాల",
+          "గురువు", "విద్యార్థి", "అమ్మ", "నాన్న", "అన్న", "అక్క", "కుటుంబం",
+          "స్నేహితుడు", "ప్రేమ", "శాంతి", "సంతోషం", "ఈరోజు", "రేపు", "ఉదయం",
+          "సాయంత్రం", "రాత్రి", "పని", "చదువు", "ఆట", "మార్కెట్", "ఆసుపత్రి",
+          "గుడి", "కార్యాలయం", "నగరం", "గ్రామం", "ఒకటి", "రెండు", "మూడు"
+        ],
+        sentences: [
+          "శుభోదయం", "శుభ రాత్రి", "మీరు ఎలా ఉన్నారు", "మీ పేరు ఏమిటి",
+          "నేను బాగున్నాను", "మిమ్మల్ని కలవడం ఆనందంగా ఉంది", "తర్వాత కలుద్దాం",
+          "జాగ్రత్త", "నేను నిన్ను ప్రేమిస్తున్నాను", "చాలా ధన్యవాదాలు",
+          "మీ రోజు శుభంగా ఉండాలి", "నాకు సహాయం కావాలి", "సమయం ఎంత",
+          "మీరు ఎక్కడికి వెళ్తున్నారు", "ఆహారం రుచిగా ఉంది", "నేను అలసిపోయాను",
+          "శుభాకాంక్షలు", "వెళ్దాం రండి", "ఇక్కడికి రండి", "కూర్చోండి", "ఇక్కడ ఆగండి"
+        ]
+      },
+      ta: {
+        words: [
+          "வணக்கம்", "நன்றி", "தயவுசெய்து", "மன்னிக்கவும்", "வரவேற்கிறேன்",
+          "ஆம்", "இல்லை", "நீர்", "உணவு", "வீடு", "புத்தகம்", "பள்ளி",
+          "ஆசிரியர்", "மாணவன்", "அம்மா", "அப்பா", "அண்ணன்", "அக்கா", "குடும்பம்",
+          "நண்பன்", "அன்பு", "அமைதி", "மகிழ்ச்சி", "இன்று", "நாளை", "காலை",
+          "மாலை", "இரவு", "வேலை", "படிப்பு", "விளையாட்டு", "சந்தை", "மருத்துவமனை",
+          "கோவில்", "அலுவலகம்", "நகரம்", "கிராமம்", "ஒன்று", "இரண்டு", "மூன்று"
+        ],
+        sentences: [
+          "காலை வணக்கம்", "இனிய இரவு", "நீங்கள் எப்படி இருக்கிறீர்கள்", "உங்கள் பெயர் என்ன",
+          "நான் நலமாக இருக்கிறேன்", "உங்களை சந்தித்ததில் மகிழ்ச்சி", "பின்னர் சந்திப்போம்",
+          "கவனமாக இருங்கள்", "நான் உன்னை காதலிக்கிறேன்", "மிக்க நன்றி",
+          "உங்கள் நாள் இனிதாக இருக்கட்டும்", "எனக்கு உதவி தேவை", "நேரம் என்ன",
+          "நீங்கள் எங்கே போகிறீர்கள்", "உணவு சுவையாக இருக்கிறது", "நான் சோர்வாக இருக்கிறேன்",
+          "வாழ்த்துக்கள்", "போகலாம் வாங்க", "இங்கே வாருங்கள்", "உட்காருங்கள்", "இங்கே காத்திருங்கள்"
+        ]
+      },
+      kn: {
+        words: [
+          "ನಮಸ್ಕಾರ", "ಧನ್ಯವಾದಗಳು", "ದಯವಿಟ್ಟು", "ಕ್ಷಮಿಸಿ", "ಸ್ವಾಗತ",
+          "ಹೌದು", "ಇಲ್ಲ", "ನೀರು", "ಆಹಾರ", "ಮನೆ", "ಪುಸ್ತಕ", "ಶಾಲೆ",
+          "ಶಿಕ್ಷಕ", "ವಿದ್ಯಾರ್ಥಿ", "ಅಮ್ಮ", "ಅಪ್ಪ", "ಅಣ್ಣ", "ಅಕ್ಕ", "ಕುಟುಂಬ",
+          "ಸ್ನೇಹಿತ", "ಪ್ರೀತಿ", "ಶಾಂತಿ", "ಸಂತೋಷ", "ಇಂದು", "ನಾಳೆ", "ಬೆಳಿಗ್ಗೆ",
+          "ಸಂಜೆ", "ರಾತ್ರಿ", "ಕೆಲಸ", "ಅಧ್ಯಯನ", "ಆಟ", "ಮಾರುಕಟ್ಟೆ", "ಆಸ್ಪತ್ರೆ",
+          "ದೇವಾಲಯ", "ಕಚೇರಿ", "ನಗರ", "ಗ್ರಾಮ", "ಒಂದು", "ಎರಡು", "ಮೂರು"
+        ],
+        sentences: [
+          "ಶುಭೋದಯ", "ಶುಭ ರಾತ್ರಿ", "ನೀವು ಹೇಗಿದ್ದೀರಿ", "ನಿಮ್ಮ ಹೆಸರೇನು",
+          "ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ", "ನಿಮ್ಮನ್ನು ಭೇಟಿ ಮಾಡಲು ಸಂತೋಷವಾಗಿದೆ", "ನಂತರ ಭೇಟಿಯಾಗೋಣ",
+          "ಕಾಳಜಿ ವಹಿಸಿ", "ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ", "ತುಂಬಾ ಧನ್ಯವಾದಗಳು",
+          "ನಿಮ್ಮ ದಿನ ಶುಭವಾಗಲಿ", "ನನಗೆ ಸಹಾಯ ಬೇಕು", "ಸಮಯ ಎಷ್ಟಾಯಿತು",
+          "ನೀವು ಎಲ್ಲಿಗೆ ಹೋಗುತ್ತಿದ್ದೀರಿ", "ಆಹಾರ ರುಚಿಕರವಾಗಿದೆ", "ನಾನು ದಣಿದಿದ್ದೇನೆ",
+          "ಶುಭಾಶಯಗಳು", "ಹೋಗೋಣ ಬನ್ನಿ", "ಇಲ್ಲಿಗೆ ಬನ್ನಿ", "ಕುಳಿತುಕೊಳ್ಳಿ", "ಇಲ್ಲಿ ನಿಲ್ಲಿ"
+        ]
+      },
+      es: {
+        words: [
+          "Hola", "Gracias", "Por favor", "Lo siento", "Bienvenido",
+          "Si", "No", "Agua", "Comida", "Casa", "Libro", "Escuela",
+          "Maestro", "Estudiante", "Madre", "Padre", "Hermano", "Hermana", "Familia",
+          "Amigo", "Amor", "Paz", "Feliz", "Hoy", "Manana", "Manana",
+          "Tarde", "Noche", "Trabajo", "Estudio", "Juego", "Mercado", "Hospital",
+          "Templo", "Oficina", "Ciudad", "Pueblo", "Uno", "Dos", "Tres"
+        ],
+        sentences: [
+          "Buenos dias", "Buenas noches", "Como estas", "Cual es tu nombre",
+          "Estoy bien", "Mucho gusto", "Hasta luego", "Cudate",
+          "Te quiero", "Te extrano", "Muchas gracias",
+          "Que tengas un buen dia", "Necesito ayuda", "Que hora es",
+          "Adonde vas", "La comida esta deliciosa", "Estoy cansado",
+          "Buena suerte", "Vamonos", "Ven aqui", "Sientate", "Quedate aqui"
+        ]
+      },
+      fr: {
+        words: [
+          "Bonjour", "Merci", "S'il vous plait", "Pardon", "Bienvenue",
+          "Oui", "Non", "Eau", "Nourriture", "Maison", "Livre", "Ecole",
+          "Professeur", "Etudiant", "Mere", "Pere", "Frere", "Soeur", "Famille",
+          "Ami", "Amour", "Paix", "Heureux", "Aujourd'hui", "Demain", "Hier",
+          "Matin", "Soir", "Nuit", "Travail", "Etude", "Jeu", "Marche", "Hopital",
+          "Temple", "Bureau", "Ville", "Village", "Un", "Deux", "Trois"
+        ],
+        sentences: [
+          "Bonjour", "Bonne nuit", "Comment allez-vous", "Quel est votre nom",
+          "Je vais bien", "Enchante de vous rencontrer", "A bientot",
+          "Prenez soin de vous", "Je t'aime", "Tu me manques", "Merci beaucoup",
+          "Bonne journee", "J'ai besoin d'aide", "Quelle heure est-il",
+          "Ou allez-vous", "La nourriture est delicieuse", "Je suis fatigue",
+          "Bonne chance", "Allons-y", "Venez ici", "Asseyez-vous", "Attendez ici"
+        ]
+      },
+      de: {
+        words: [
+          "Hallo", "Danke", "Bitte", "Entschuldigung", "Willkommen",
+          "Ja", "Nein", "Wasser", "Essen", "Haus", "Buch", "Schule",
+          "Lehrer", "Student", "Mutter", "Vater", "Bruder", "Schwester", "Familie",
+          "Freund", "Liebe", "Frieden", "Gluecklich", "Heute", "Morgen", "Gestern",
+          "Morgens", "Abend", "Nacht", "Arbeit", "Studium", "Spiel", "Markt", "Krankenhaus",
+          "Tempel", "Buero", "Stadt", "Dorf", "Eins", "Zwei", "Drei"
+        ],
+        sentences: [
+          "Guten Morgen", "Gute Nacht", "Wie geht es Ihnen", "Wie heissen Sie",
+          "Mir geht es gut", "Schoen Sie kennenzulernen", "Bis spaeter",
+          "Pass auf dich auf", "Ich liebe dich", "Ich vermisse dich", "Vielen Dank",
+          "Einen schoenen Tag", "Ich brauche Hilfe", "Wie spaet ist es",
+          "Wohin gehen Sie", "Das Essen ist koestlich", "Ich bin muede",
+          "Viel Glueck", "Lass uns gehen", "Komm her", "Sitz hin", "Warte hier"
+        ]
+      },
+      ja: {
+        words: [
+          "こんにちは", "ありがとう", "おねがい", "すみません", "ようこそ",
+          "はい", "いいえ", "みず", "たべもの", "いえ", "ほん", "がっこう",
+          "せんせい", "がくせい", "おかあさん", "おとうさん", "おにいさん", "おねえさん", "かぞく",
+          "ともだち", "あい", "へいわ", "しあわせ", "きょう", "あした", "きのう",
+          "あさ", "ゆうがた", "よる", "しごと", "べんきょう", "あそび", "いちば", "びょういん",
+          "じんじゃ", "かいしゃ", "まち", "むら", "いち", "に", "さん"
+        ],
+        sentences: [
+          "おはようございます", "おやすみなさい", "おげんきですか", "おなまえはなんですか",
+          "げんきです", "はじめまして", "またね",
+          "きをつけて", "あいしてる", "あいたいです", "ありがとうございます",
+          "よいいちにちを", "てつだってください", "いまなんじですか",
+          "どこへいきますか", "たべものがおいしい", "つかれました",
+          "がんばって", "いきましょう", "こちらへきて", "すわってください", "まってください"
+        ]
+      },
+      zh: {
+        words: [
+          "你好", "谢谢", "请", "对不起", "欢迎",
+          "是", "不", "水", "食物", "家", "书", "学校",
+          "老师", "学生", "妈妈", "爸爸", "哥哥", "姐姐", "家人",
+          "朋友", "爱", "和平", "快乐", "今天", "明天", "昨天",
+          "早上", "晚上", "夜晚", "工作", "学习", "玩", "市场", "医院",
+          "寺庙", "办公室", "城市", "村庄", "一", "二", "三"
+        ],
+        sentences: [
+          "早上好", "晚安", "你好吗", "你叫什么名字",
+          "我很好", "很高兴认识你", "再见",
+          "保重", "我爱你", "我想你", "非常感谢",
+          "祝你今天愉快", "我需要帮助", "现在几点了",
+          "你去哪里", "食物很好吃", "我很累",
+          "祝你好运", "我们走吧", "过来", "请坐", "在这里等"
+        ]
+      }
+    };
+
+    // Typing Game Functions
+    function setDifficulty(difficulty) {
+      currentDifficulty = difficulty;
+      
+      document.getElementById('wordsBtn').classList.remove('active');
+      document.getElementById('sentencesBtn').classList.remove('active');
+      
+      if (difficulty === 'words') {
+        document.getElementById('wordsBtn').classList.add('active');
+      } else {
+        document.getElementById('sentencesBtn').classList.add('active');
+      }
+      
+      if (isTypingGameActive) {
+        loadNewText();
+      }
+    }
+
+    function startTypingGame() {
+      isTypingGameActive = true;
+      document.getElementById('typingInput').disabled = false;
+      document.getElementById('typingInput').value = '';
+      document.getElementById('typingInput').focus();
+      document.getElementById('skipBtn').disabled = false;
+      document.getElementById('listenBtn').disabled = false;
+      document.getElementById('startTypingBtn').innerHTML = '<i class="fas fa-redo mr-1"></i> Restart';
+      
+      loadNewText();
+    }
+
+    function listenTypingText() {
+      if (!currentTargetText || currentTargetText === 'Select a language and click Start to begin') {
+        showMessage('No text to listen to'); return;
+      }
+      if (!synth) { showMessage('Speech synthesis not supported in this browser'); return; }
+      const lang = document.getElementById('typingLang').value;
+      const langMap = {
+        'en': 'en-US', 'hi': 'hi-IN', 'te': 'te-IN', 'ta': 'ta-IN', 'kn': 'kn-IN',
+        'es': 'es-ES', 'fr': 'fr-FR', 'de': 'de-DE', 'ja': 'ja-JP', 'zh': 'zh-CN'
+      };
+      stopTTS();
+      try {
+        currentUtterance = new SpeechSynthesisUtterance(currentTargetText);
+        currentUtterance.lang = langMap[lang] || 'en-US';
+        currentUtterance.rate = 0.85;
+        synth.speak(currentUtterance);
+      } catch(e) { showMessage('Speech error: ' + e.message); console.error(e); return; }
+      // Visual feedback
+      const listenBtn = document.getElementById('listenBtn');
+      listenBtn.classList.add('recording');
+      setTimeout(() => { listenBtn.classList.remove('recording'); }, 1500);
+    }
+
+    function loadNewText() {
+      const lang = document.getElementById('typingLang').value;
+      const content = typingContent[lang][currentDifficulty];
+      const randomIndex = Math.floor(Math.random() * content.length);
+      currentTargetText = content[randomIndex];
+      
+      document.getElementById('targetText').textContent = currentTargetText;
+      document.getElementById('typingInput').value = '';
+      document.getElementById('typingFeedback').textContent = '';
+      document.getElementById('typingFeedback').className = 'mb-4 text-center text-base md:text-lg font-semibold h-8';
+    }
+
+    function checkTypedText() {
+      const typedText = document.getElementById('typingInput').value;
+      
+      if (typedText === currentTargetText) {
+        typingScore += 10;
+        correctCount++;
+        
+        document.getElementById('typingScore').textContent = typingScore;
+        document.getElementById('correctCount').textContent = correctCount;
+        
+        document.getElementById('typingFeedback').textContent = '✓ Correct! +10 points';
+        document.getElementById('typingFeedback').className = 'mb-4 text-center text-base md:text-lg font-semibold h-8 text-green-600';
+        
+        setTimeout(() => {
+          loadNewText();
+        }, 1000);
+      }
+    }
+
+    function skipWord() {
+      if (isTypingGameActive) {
+        wrongCount++;
+        document.getElementById('wrongCount').textContent = wrongCount;
+        
+        document.getElementById('typingFeedback').textContent = '✗ Skipped';
+        document.getElementById('typingFeedback').className = 'mb-4 text-center text-base md:text-lg font-semibold h-8 text-orange-600';
+        
+        setTimeout(() => {
+          loadNewText();
+        }, 800);
+      }
+    }
+
+    function resetTypingGame() {
+      typingScore = 0;
+      correctCount = 0;
+      wrongCount = 0;
+      isTypingGameActive = false;
+      
+      document.getElementById('typingScore').textContent = '0';
+      document.getElementById('correctCount').textContent = '0';
+      document.getElementById('wrongCount').textContent = '0';
+      document.getElementById('targetText').textContent = 'Select a language and click Start to begin';
+      document.getElementById('typingInput').value = '';
+      document.getElementById('typingInput').disabled = true;
+      document.getElementById('typingFeedback').textContent = '';
+      document.getElementById('typingFeedback').className = 'mb-4 text-center text-base md:text-lg font-semibold h-8';
+      document.getElementById('skipBtn').disabled = true;
+      document.getElementById('listenBtn').disabled = true;
+      document.getElementById('startTypingBtn').innerHTML = '<i class="fas fa-play mr-1"></i> Start';
+    }
+
+    // Character counter for paragraph input
+    document.addEventListener('DOMContentLoaded', function() {
+      const paragraphInput = document.getElementById('paragraphInput');
+      if (paragraphInput) {
+        paragraphInput.addEventListener('input', function() {
+          document.getElementById('charCount').textContent = this.value.length;
+        });
+      }
+      
+      const typingInput = document.getElementById('typingInput');
+      if (typingInput) {
+        typingInput.addEventListener('input', checkTypedText);
+        
+        typingInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const typedText = this.value;
+            if (typedText !== currentTargetText) {
+              wrongCount++;
+              document.getElementById('wrongCount').textContent = wrongCount;
+              
+              document.getElementById('typingFeedback').textContent = '✗ Incorrect, try again!';
+              document.getElementById('typingFeedback').className = 'mb-4 text-center text-base md:text-lg font-semibold h-8 text-red-600';
+              
+              this.value = '';
+              
+              setTimeout(() => {
+                document.getElementById('typingFeedback').textContent = '';
+              }, 1500);
+            }
+          }
+        });
+      }
+    });
+
+    // Translation dictionary with 150+ words and phrases
+    const translationDB = {
+      en: {
+        "Hello": "Hello", "Good morning": "Good morning", "Good night": "Good night",
+        "Thank you": "Thank you", "Please": "Please", "Sorry": "Sorry",
+        "Yes": "Yes", "No": "No", "Welcome": "Welcome", "Goodbye": "Goodbye",
+        
+        "One": "One", "Two": "Two", "Three": "Three", "Four": "Four", "Five": "Five",
+        "Six": "Six", "Seven": "Seven", "Eight": "Eight", "Nine": "Nine", "Ten": "Ten",
+        
+        "Mother": "Mother", "Father": "Father", "Brother": "Brother", "Sister": "Sister",
+        "Family": "Family", "Friend": "Friend", "Husband": "Husband", "Wife": "Wife",
+        
+        "Water": "Water", "Food": "Food", "House": "House", "Book": "Book",
+        "School": "School", "Teacher": "Teacher", "Student": "Student",
+        "Love": "Love", "Peace": "Peace", "Happy": "Happy", "Sad": "Sad",
+        
+        "Today": "Today", "Tomorrow": "Tomorrow", "Yesterday": "Yesterday",
+        "Morning": "Morning", "Evening": "Evening", "Night": "Night",
+        
+        "What": "What", "Where": "Where", "When": "When", "Who": "Who", "Why": "Why",
+        "How": "How", "How much": "How much",
+        
+        "Go": "Go", "Come": "Come", "Eat": "Eat", "Drink": "Drink",
+        "Sleep": "Sleep", "Work": "Work", "Study": "Study", "Play": "Play",
+        
+        "Market": "Market", "Hospital": "Hospital", "Temple": "Temple",
+        "Office": "Office", "Home": "Home", "City": "City", "Village": "Village",
+        
+        "Red": "Red", "Blue": "Blue", "Green": "Green", "Yellow": "Yellow",
+        "White": "White", "Black": "Black",
+        
+        "Head": "Head", "Hand": "Hand", "Leg": "Leg", "Eye": "Eye", "Ear": "Ear",
+        
+        "Sun": "Sun", "Moon": "Moon", "Star": "Star", "Rain": "Rain", "Tree": "Tree",
+        
+        "How are you": "How are you", "What is your name": "What is your name",
+        "I am fine": "I am fine", "Nice to meet you": "Nice to meet you",
+        "See you later": "See you later", "Take care": "Take care",
+        "Good luck": "Good luck", "Congratulations": "Congratulations",
+        "I love you": "I love you", "I miss you": "I miss you"
+      },
+      hi: {
+        "Hello": "नमस्ते", "Good morning": "सुप्रभात", "Good night": "शुभ रात्रि",
+        "Thank you": "धन्यवाद", "Please": "कृपया", "Sorry": "माफ़ कीजिए",
+        "Yes": "हाँ", "No": "नहीं", "Welcome": "स्वागत है", "Goodbye": "अलविदा",
+        
+        "One": "एक", "Two": "दो", "Three": "तीन", "Four": "चार", "Five": "पाँच",
+        "Six": "छह", "Seven": "सात", "Eight": "आठ", "Nine": "नौ", "Ten": "दस",
+        
+        "Mother": "माँ", "Father": "पिता", "Brother": "भाई", "Sister": "बहन",
+        "Family": "परिवार", "Friend": "दोस्त", "Husband": "पति", "Wife": "पत्नी",
+        
+        "Water": "पानी", "Food": "भोजन", "House": "घर", "Book": "किताब",
+        "School": "स्कूल", "Teacher": "शिक्षक", "Student": "छात्र",
+        "Love": "प्यार", "Peace": "शांति", "Happy": "खुश", "Sad": "दुखी",
+        
+        "Today": "आज", "Tomorrow": "कल", "Yesterday": "कल",
+        "Morning": "सुबह", "Evening": "शाम", "Night": "रात",
+        
+        "What": "क्या", "Where": "कहाँ", "When": "कब", "Who": "कौन", "Why": "क्यों",
+        "How": "कैसे", "How much": "कितना",
+        
+        "Go": "जाओ", "Come": "आओ", "Eat": "खाओ", "Drink": "पियो",
+        "Sleep": "सोओ", "Work": "काम", "Study": "पढ़ाई", "Play": "खेल",
+        
+        "Market": "बाज़ार", "Hospital": "अस्पताल", "Temple": "मंदिर",
+        "Office": "कार्यालय", "Home": "घर", "City": "शहर", "Village": "गाँव",
+        
+        "Red": "लाल", "Blue": "नीला", "Green": "हरा", "Yellow": "पीला",
+        "White": "सफ़ेद", "Black": "काला",
+        
+        "Head": "सिर", "Hand": "हाथ", "Leg": "पैर", "Eye": "आँख", "Ear": "कान",
+        
+        "Sun": "सूर्य", "Moon": "चंद्रमा", "Star": "तारा", "Rain": "बारिश", "Tree": "पेड़",
+        
+        "How are you": "आप कैसे हैं", "What is your name": "आपका नाम क्या है",
+        "I am fine": "मैं ठीक हूँ", "Nice to meet you": "आपसे मिलकर अच्छा लगा",
+        "See you later": "फिर मिलेंगे", "Take care": "ख्याल रखना",
+        "Good luck": "शुभकामनाएं", "Congratulations": "बधाई हो",
+        "I love you": "मैं तुमसे प्यार करता हूँ", "I miss you": "मुझे तुम्हारी याद आती है"
+      },
+      te: {
+        "Hello": "నమస్కారం", "Good morning": "శుభోదయం", "Good night": "శుభ రాత్రి",
+        "Thank you": "ధన్యవాదాలు", "Please": "దయచేసి", "Sorry": "క్షమించండి",
+        "Yes": "అవును", "No": "కాదు", "Welcome": "స్వాగతం", "Goodbye": "వెళ్ళొద్దు",
+        
+        "One": "ఒకటి", "Two": "రెండు", "Three": "మూడు", "Four": "నాలుగు", "Five": "ఐదు",
+        "Six": "ఆరు", "Seven": "ఏడు", "Eight": "ఎనిమిది", "Nine": "తొమ్మిది", "Ten": "పది",
+        
+        "Mother": "అమ్మ", "Father": "నాన్న", "Brother": "అన్న", "Sister": "అక్క",
+        "Family": "కుటుంబం", "Friend": "స్నేహితుడు", "Husband": "భర్త", "Wife": "భార్య",
+        
+        "Water": "నీరు", "Food": "ఆహారం", "House": "ఇల్లు", "Book": "పుస్తకం",
+        "School": "పాఠశాల", "Teacher": "గురువు", "Student": "విద్యార్థి",
+        "Love": "ప్రేమ", "Peace": "శాంతి", "Happy": "సంతోషం", "Sad": "బాధ",
+        
+        "Today": "ఈరోజు", "Tomorrow": "రేపు", "Yesterday": "నిన్న",
+        "Morning": "ఉదయం", "Evening": "సాయంత్రం", "Night": "రాత్రి",
+        
+        "What": "ఏమిటి", "Where": "ఎక్కడ", "When": "ఎప్పుడు", "Who": "ఎవరు", "Why": "ఎందుకు",
+        "How": "ఎలా", "How much": "ఎంత",
+        
+        "Go": "వెళ్ళు", "Come": "రా", "Eat": "తిను", "Drink": "త్రాగు",
+        "Sleep": "నిద్ర", "Work": "పని", "Study": "చదువు", "Play": "ఆట",
+        
+        "Market": "మార్కెట్", "Hospital": "ఆసుపత్రి", "Temple": "గుడి",
+        "Office": "కార్యాలయం", "Home": "ఇల్లు", "City": "నగరం", "Village": "గ్రామం",
+        
+        "Red": "ఎరుపు", "Blue": "నీలం", "Green": "ఆకుపచ్చ", "Yellow": "పసుపు",
+        "White": "తెలుపు", "Black": "నలుపు",
+        
+        "Head": "తల", "Hand": "చేయి", "Leg": "కాలు", "Eye": "కన్ను", "Ear": "చెవి",
+        
+        "Sun": "సూర్యుడు", "Moon": "చంద్రుడు", "Star": "నక్షత్రం", "Rain": "వర్షం", "Tree": "చెట్టు",
+        
+        "How are you": "మీరు ఎలా ఉన్నారు", "What is your name": "మీ పేరు ఏమిటి",
+        "I am fine": "నేను బాగున్నాను", "Nice to meet you": "మిమ్మల్ని కలవడం ఆనందంగా ఉంది",
+        "See you later": "తర్వాత కలుద్దాం", "Take care": "జాగ్రత్త",
+        "Good luck": "శుభాకాంక్షలు", "Congratulations": "అభినందనలు",
+        "I love you": "నేను నిన్ను ప్రేమిస్తున్నాను", "I miss you": "నాకు నువ్వు గుర్తు వస్తున్నావు"
+      },
+      ta: {
+        "Hello": "வணக்கம்", "Good morning": "காலை வணக்கம்", "Good night": "இனிய இரவு",
+        "Thank you": "நன்றி", "Please": "தயவுசெய்து", "Sorry": "மன்னிக்கவும்",
+        "Yes": "ஆம்", "No": "இல்லை", "Welcome": "வரவேற்கிறேன்", "Goodbye": "விடைபெறுகிறேன்",
+        
+        "One": "ஒன்று", "Two": "இரண்டு", "Three": "மூன்று", "Four": "நான்கு", "Five": "ஐந்து",
+        "Six": "ஆறு", "Seven": "ஏழு", "Eight": "எட்டு", "Nine": "ஒன்பது", "Ten": "பத்து",
+        
+        "Mother": "அம்மா", "Father": "அப்பா", "Brother": "அண்ணன்", "Sister": "அக்கா",
+        "Family": "குடும்பம்", "Friend": "நண்பன்", "Husband": "கணவன்", "Wife": "மனைவி",
+        
+        "Water": "நீர்", "Food": "உணவு", "House": "வீடு", "Book": "புத்தகம்",
+        "School": "பள்ளி", "Teacher": "ஆசிரியர்", "Student": "மாணவன்",
+        "Love": "அன்பு", "Peace": "அமைதி", "Happy": "மகிழ்ச்சி", "Sad": "சோகம்",
+        
+        "Today": "இன்று", "Tomorrow": "நாளை", "Yesterday": "நேற்று",
+        "Morning": "காலை", "Evening": "மாலை", "Night": "இரவு",
+        
+        "What": "என்ன", "Where": "எங்கே", "When": "எப்போது", "Who": "யார்", "Why": "ஏன்",
+        "How": "எப்படி", "How much": "எவ்வளவு",
+        
+        "Go": "போ", "Come": "வா", "Eat": "சாப்பிடு", "Drink": "குடி",
+        "Sleep": "தூங்கு", "Work": "வேலை", "Study": "படிப்பு", "Play": "விளையாட்டு",
+        
+        "Market": "சந்தை", "Hospital": "மருத்துவமனை", "Temple": "கோவில்",
+        "Office": "அலுவலகம்", "Home": "வீடு", "City": "நகரம்", "Village": "கிராமம்",
+        
+        "Red": "சிவப்பு", "Blue": "நீலம்", "Green": "பச்சை", "Yellow": "மஞ்சள்",
+        "White": "வெள்ளை", "Black": "கருப்பு",
+        
+        "Head": "தலை", "Hand": "கை", "Leg": "கால்", "Eye": "கண்", "Ear": "காது",
+        
+        "Sun": "சூரியன்", "Moon": "சந்திரன்", "Star": "நட்சத்திரம்", "Rain": "மழை", "Tree": "மரம்",
+        
+        "How are you": "நீங்கள் எப்படி இருக்கிறீர்கள்", "What is your name": "உங்கள் பெயர் என்ன",
+        "I am fine": "நான் நலமாக இருக்கிறேன்", "Nice to meet you": "உங்களை சந்தித்ததில் மகிழ்ச்சி",
+        "See you later": "பின்னர் சந்திப்போம்", "Take care": "கவனமாக இருங்கள்",
+        "Good luck": "வாழ்த்துக்கள்", "Congratulations": "வாழ்த்துக்கள்",
+        "I love you": "நான் உன்னை காதலிக்கிறேன்", "I miss you": "நான் உன்னை மிஸ் பண்றேன்"
+      },
+      kn: {
+        "Hello": "ನಮಸ್ಕಾರ", "Good morning": "ಶುಭೋದಯ", "Good night": "ಶುಭ ರಾತ್ರಿ",
+        "Thank you": "ಧನ್ಯವಾದಗಳು", "Please": "ದಯವಿಟ್ಟು", "Sorry": "ಕ್ಷಮಿಸಿ",
+        "Yes": "ಹೌದು", "No": "ಇಲ್ಲ", "Welcome": "ಸ್ವಾಗತ", "Goodbye": "ವಿದಾಯ",
+        
+        "One": "ಒಂದು", "Two": "ಎರಡು", "Three": "ಮೂರು", "Four": "ನಾಲ್ಕು", "Five": "ಐದು",
+        "Six": "ಆರು", "Seven": "ಏಳು", "Eight": "ಎಂಟು", "Nine": "ಒಂಬತ್ತು", "Ten": "ಹತ್ತು",
+        
+        "Mother": "ಅಮ್ಮ", "Father": "ಅಪ್ಪ", "Brother": "ಅಣ್ಣ", "Sister": "ಅಕ್ಕ",
+        "Family": "ಕುಟುಂಬ", "Friend": "ಸ್ನೇಹಿತ", "Husband": "ಗಂಡ", "Wife": "ಹೆಂಡತಿ",
+        
+        "Water": "ನೀರು", "Food": "ಆಹಾರ", "House": "ಮನೆ", "Book": "ಪುಸ್ತಕ",
+        "School": "ಶಾಲೆ", "Teacher": "ಶಿಕ್ಷಕ", "Student": "ವಿದ್ಯಾರ್ಥಿ",
+        "Love": "ಪ್ರೀತಿ", "Peace": "ಶಾಂತಿ", "Happy": "ಸಂತೋಷ", "Sad": "ದುಃಖ",
+        
+        "Today": "ಇಂದು", "Tomorrow": "ನಾಳೆ", "Yesterday": "ನಿನ್ನೆ",
+        "Morning": "ಬೆಳಿಗ್ಗೆ", "Evening": "ಸಂಜೆ", "Night": "ರಾತ್ರಿ",
+        
+        "What": "ಏನು", "Where": "ಎಲ್ಲಿ", "When": "ಯಾವಾಗ", "Who": "ಯಾರು", "Why": "ಏಕೆ",
+        "How": "ಹೇಗೆ", "How much": "ಎಷ್ಟು",
+        
+        "Go": "ಹೋಗು", "Come": "ಬಾ", "Eat": "ತಿನ್ನು", "Drink": "ಕುಡಿ",
+        "Sleep": "ನಿದ್ರೆ", "Work": "ಕೆಲಸ", "Study": "ಅಧ್ಯಯನ", "Play": "ಆಟ",
+        
+        "Market": "ಮಾರುಕಟ್ಟೆ", "Hospital": "ಆಸ್ಪತ್ರೆ", "Temple": "ದೇವಾಲಯ",
+        "Office": "ಕಚೇರಿ", "Home": "ಮನೆ", "City": "ನಗರ", "Village": "ಗ್ರಾಮ",
+        
+        "Red": "ಕೆಂಪು", "Blue": "ನೀಲಿ", "Green": "ಹಸಿರು", "Yellow": "ಹಳದಿ",
+        "White": "ಬಿಳಿ", "Black": "ಕಪ್ಪು",
+        
+        "Head": "ತಲೆ", "Hand": "ಕೈ", "Leg": "ಕಾಲು", "Eye": "ಕಣ್ಣು", "Ear": "ಕಿವಿ",
+        
+        "Sun": "ಸೂರ್ಯ", "Moon": "ಚಂದ್ರ", "Star": "ನಕ್ಷತ್ರ", "Rain": "ಮಳೆ", "Tree": "ಮರ",
+        
+        "How are you": "ನೀವು ಹೇಗಿದ್ದೀರಿ", "What is your name": "ನಿಮ್ಮ ಹೆಸರೇನು",
+        "I am fine": "ನಾನು ಚೆನ್ನಾಗಿದ್ದೇನೆ", "Nice to meet you": "ನಿಮ್ಮನ್ನು ಭೇಟಿ ಮಾಡಲು ಸಂತೋಷವಾಗಿದೆ",
+        "See you later": "ನಂತರ ಭೇಟಿಯಾಗೋಣ", "Take care": "ಕಾಳಜಿ ವಹಿಸಿ",
+        "Good luck": "ಶುಭಾಶಯಗಳು", "Congratulations": "ಅಭಿನಂದನೆಗಳು",
+        "I love you": "ನಾನು ನಿನ್ನನ್ನು ಪ್ರೀತಿಸುತ್ತೇನೆ", "I miss you": "ನಾನು ನಿನ್ನನ್ನು ಮಿಸ್ ಮಾಡುತ್ತೇನೆ"
+      },
+      es: {
+        "Hello": "Hola", "Good morning": "Buenos días", "Good night": "Buenas noches",
+        "Thank you": "Gracias", "Please": "Por favor", "Sorry": "Lo siento",
+        "Yes": "Sí", "No": "No", "Welcome": "Bienvenido", "Goodbye": "Adiós",
+        
+        "One": "Uno", "Two": "Dos", "Three": "Tres", "Four": "Cuatro", "Five": "Cinco",
+        "Six": "Seis", "Seven": "Siete", "Eight": "Ocho", "Nine": "Nueve", "Ten": "Diez",
+        
+        "Mother": "Madre", "Father": "Padre", "Brother": "Hermano", "Sister": "Hermana",
+        "Family": "Familia", "Friend": "Amigo", "Husband": "Esposo", "Wife": "Esposa",
+        
+        "Water": "Agua", "Food": "Comida", "House": "Casa", "Book": "Libro",
+        "School": "Escuela", "Teacher": "Maestro", "Student": "Estudiante",
+        "Love": "Amor", "Peace": "Paz", "Happy": "Feliz", "Sad": "Triste",
+        
+        "Today": "Hoy", "Tomorrow": "Mañana", "Yesterday": "Ayer",
+        "Morning": "Mañana", "Evening": "Tarde", "Night": "Noche",
+        
+        "What": "Qué", "Where": "Dónde", "When": "Cuándo", "Who": "Quién", "Why": "Por qué",
+        "How": "Cómo", "How much": "Cuánto",
+        
+        "Go": "Ve", "Come": "Ven", "Eat": "Come", "Drink": "Bebe",
+        "Sleep": "Duerme", "Work": "Trabajo", "Study": "Estudio", "Play": "Jugar",
+        
+        "Market": "Mercado", "Hospital": "Hospital", "Temple": "Templo",
+        "Office": "Oficina", "Home": "Hogar", "City": "Ciudad", "Village": "Pueblo",
+        
+        "Red": "Rojo", "Blue": "Azul", "Green": "Verde", "Yellow": "Amarillo",
+        "White": "Blanco", "Black": "Negro",
+        
+        "Head": "Cabeza", "Hand": "Mano", "Leg": "Pierna", "Eye": "Ojo", "Ear": "Oreja",
+        
+        "Sun": "Sol", "Moon": "Luna", "Star": "Estrella", "Rain": "Lluvia", "Tree": "Árbol",
+        
+        "How are you": "¿Cómo estás?", "What is your name": "¿Cómo te llamas?",
+        "I am fine": "Estoy bien", "Nice to meet you": "Mucho gusto",
+        "See you later": "Hasta luego", "Take care": "Cuídate",
+        "Good luck": "Buena suerte", "Congratulations": "Felicitaciones",
+        "I love you": "Te quiero", "I miss you": "Te extraño"
+      },
+      fr: {
+        "Hello": "Bonjour", "Good morning": "Bonjour", "Good night": "Bonne nuit",
+        "Thank you": "Merci", "Please": "S'il vous plaît", "Sorry": "Pardon",
+        "Yes": "Oui", "No": "Non", "Welcome": "Bienvenue", "Goodbye": "Au revoir",
+        
+        "One": "Un", "Two": "Deux", "Three": "Trois", "Four": "Quatre", "Five": "Cinq",
+        "Six": "Six", "Seven": "Sept", "Eight": "Huit", "Nine": "Neuf", "Ten": "Dix",
+        
+        "Mother": "Mère", "Father": "Père", "Brother": "Frère", "Sister": "Sœur",
+        "Family": "Famille", "Friend": "Ami", "Husband": "Mari", "Wife": "Femme",
+        
+        "Water": "Eau", "Food": "Nourriture", "House": "Maison", "Book": "Livre",
+        "School": "École", "Teacher": "Professeur", "Student": "Étudiant",
+        "Love": "Amour", "Peace": "Paix", "Happy": "Heureux", "Sad": "Triste",
+        
+        "Today": "Aujourd'hui", "Tomorrow": "Demain", "Yesterday": "Hier",
+        "Morning": "Matin", "Evening": "Soir", "Night": "Nuit",
+        
+        "What": "Quoi", "Where": "Où", "When": "Quand", "Who": "Qui", "Why": "Pourquoi",
+        "How": "Comment", "How much": "Combien",
+        
+        "Go": "Va", "Come": "Viens", "Eat": "Mange", "Drink": "Bois",
+        "Sleep": "Dors", "Work": "Travail", "Study": "Étude", "Play": "Jouer",
+        
+        "Market": "Marché", "Hospital": "Hôpital", "Temple": "Temple",
+        "Office": "Bureau", "Home": "Maison", "City": "Ville", "Village": "Village",
+        
+        "Red": "Rouge", "Blue": "Bleu", "Green": "Vert", "Yellow": "Jaune",
+        "White": "Blanc", "Black": "Noir",
+        
+        "Head": "Tête", "Hand": "Main", "Leg": "Jambe", "Eye": "Œil", "Ear": "Oreille",
+        
+        "Sun": "Soleil", "Moon": "Lune", "Star": "Étoile", "Rain": "Pluie", "Tree": "Arbre",
+        
+        "How are you": "Comment allez-vous?", "What is your name": "Comment vous appelez-vous?",
+        "I am fine": "Je vais bien", "Nice to meet you": "Enchanté",
+        "See you later": "À bientôt", "Take care": "Prenez soin de vous",
+        "Good luck": "Bonne chance", "Congratulations": "Félicitations",
+        "I love you": "Je t'aime", "I miss you": "Tu me manques"
+      },
+      de: {
+        "Hello": "Hallo", "Good morning": "Guten Morgen", "Good night": "Gute Nacht",
+        "Thank you": "Danke", "Please": "Bitte", "Sorry": "Entschuldigung",
+        "Yes": "Ja", "No": "Nein", "Welcome": "Willkommen", "Goodbye": "Auf Wiedersehen",
+        
+        "One": "Eins", "Two": "Zwei", "Three": "Drei", "Four": "Vier", "Five": "Fünf",
+        "Six": "Sechs", "Seven": "Sieben", "Eight": "Acht", "Nine": "Neun", "Ten": "Zehn",
+        
+        "Mother": "Mutter", "Father": "Vater", "Brother": "Bruder", "Sister": "Schwester",
+        "Family": "Familie", "Friend": "Freund", "Husband": "Ehemann", "Wife": "Ehefrau",
+        
+        "Water": "Wasser", "Food": "Essen", "House": "Haus", "Book": "Buch",
+        "School": "Schule", "Teacher": "Lehrer", "Student": "Student",
+        "Love": "Liebe", "Peace": "Frieden", "Happy": "Glücklich", "Sad": "Traurig",
+        
+        "Today": "Heute", "Tomorrow": "Morgen", "Yesterday": "Gestern",
+        "Morning": "Morgen", "Evening": "Abend", "Night": "Nacht",
+        
+        "What": "Was", "Where": "Wo", "When": "Wann", "Who": "Wer", "Why": "Warum",
+        "How": "Wie", "How much": "Wie viel",
+        
+        "Go": "Geh", "Come": "Komm", "Eat": "Iss", "Drink": "Trink",
+        "Sleep": "Schlaf", "Work": "Arbeit", "Study": "Studium", "Play": "Spielen",
+        
+        "Market": "Markt", "Hospital": "Krankenhaus", "Temple": "Tempel",
+        "Office": "Büro", "Home": "Zuhause", "City": "Stadt", "Village": "Dorf",
+        
+        "Red": "Rot", "Blue": "Blau", "Green": "Grün", "Yellow": "Gelb",
+        "White": "Weiß", "Black": "Schwarz",
+        
+        "Head": "Kopf", "Hand": "Hand", "Leg": "Bein", "Eye": "Auge", "Ear": "Ohr",
+        
+        "Sun": "Sonne", "Moon": "Mond", "Star": "Stern", "Rain": "Regen", "Tree": "Baum",
+        
+        "How are you": "Wie geht es Ihnen?", "What is your name": "Wie heißen Sie?",
+        "I am fine": "Mir geht es gut", "Nice to meet you": "Schön Sie kennenzulernen",
+        "See you later": "Bis später", "Take care": "Pass auf dich auf",
+        "Good luck": "Viel Glück", "Congratulations": "Herzlichen Glückwunsch",
+        "I love you": "Ich liebe dich", "I miss you": "Ich vermisse dich"
+      },
+      ja: {
+        "Hello": "こんにちは", "Good morning": "おはようございます", "Good night": "おやすみなさい",
+        "Thank you": "ありがとう", "Please": "おねがい", "Sorry": "すみません",
+        "Yes": "はい", "No": "いいえ", "Welcome": "ようこそ", "Goodbye": "さようなら",
+        
+        "One": "いち", "Two": "に", "Three": "さん", "Four": "よん", "Five": "ご",
+        "Six": "ろく", "Seven": "なな", "Eight": "はち", "Nine": "きゅう", "Ten": "じゅう",
+        
+        "Mother": "おかあさん", "Father": "おとうさん", "Brother": "おにいさん", "Sister": "おねえさん",
+        "Family": "かぞく", "Friend": "ともだち", "Husband": "おっと", "Wife": "つま",
+        
+        "Water": "みず", "Food": "たべもの", "House": "いえ", "Book": "ほん",
+        "School": "がっこう", "Teacher": "せんせい", "Student": "がくせい",
+        "Love": "あい", "Peace": "へいわ", "Happy": "しあわせ", "Sad": "かなしい",
+        
+        "Today": "きょう", "Tomorrow": "あした", "Yesterday": "きのう",
+        "Morning": "あさ", "Evening": "ゆうがた", "Night": "よる",
+        
+        "What": "なに", "Where": "どこ", "When": "いつ", "Who": "だれ", "Why": "なぜ",
+        "How": "どうやって", "How much": "いくら",
+        
+        "Go": "いく", "Come": "くる", "Eat": "たべる", "Drink": "のむ",
+        "Sleep": "ねる", "Work": "しごと", "Study": "べんきょう", "Play": "あそぶ",
+        
+        "Market": "いちば", "Hospital": "びょういん", "Temple": "じんじゃ",
+        "Office": "かいしゃ", "Home": "いえ", "City": "まち", "Village": "むら",
+        
+        "Red": "あか", "Blue": "あお", "Green": "みどり", "Yellow": "きいろ",
+        "White": "しろ", "Black": "くろ",
+        
+        "Head": "あたま", "Hand": "て", "Leg": "あし", "Eye": "め", "Ear": "みみ",
+        
+        "Sun": "たいよう", "Moon": "つき", "Star": "ほし", "Rain": "あめ", "Tree": "き",
+        
+        "How are you": "おげんきですか", "What is your name": "おなまえはなんですか",
+        "I am fine": "げんきです", "Nice to meet you": "はじめまして",
+        "See you later": "またね", "Take care": "きをつけて",
+        "Good luck": "がんばって", "Congratulations": "おめでとう",
+        "I love you": "あいしてる", "I miss you": "あいたいです"
+      },
+      zh: {
+        "Hello": "你好", "Good morning": "早上好", "Good night": "晚安",
+        "Thank you": "谢谢", "Please": "请", "Sorry": "对不起",
+        "Yes": "是", "No": "不", "Welcome": "欢迎", "Goodbye": "再见",
+        
+        "One": "一", "Two": "二", "Three": "三", "Four": "四", "Five": "五",
+        "Six": "六", "Seven": "七", "Eight": "八", "Nine": "九", "Ten": "十",
+        
+        "Mother": "妈妈", "Father": "爸爸", "Brother": "哥哥", "Sister": "姐姐",
+        "Family": "家人", "Friend": "朋友", "Husband": "丈夫", "Wife": "妻子",
+        
+        "Water": "水", "Food": "食物", "House": "家", "Book": "书",
+        "School": "学校", "Teacher": "老师", "Student": "学生",
+        "Love": "爱", "Peace": "和平", "Happy": "快乐", "Sad": "悲伤",
+        
+        "Today": "今天", "Tomorrow": "明天", "Yesterday": "昨天",
+        "Morning": "早上", "Evening": "晚上", "Night": "夜晚",
+        
+        "What": "什么", "Where": "哪里", "When": "什么时候", "Who": "谁", "Why": "为什么",
+        "How": "怎么", "How much": "多少",
+        
+        "Go": "去", "Come": "来", "Eat": "吃", "Drink": "喝",
+        "Sleep": "睡觉", "Work": "工作", "Study": "学习", "Play": "玩",
+        
+        "Market": "市场", "Hospital": "医院", "Temple": "寺庙",
+        "Office": "办公室", "Home": "家", "City": "城市", "Village": "村庄",
+        
+        "Red": "红色", "Blue": "蓝色", "Green": "绿色", "Yellow": "黄色",
+        "White": "白色", "Black": "黑色",
+        
+        "Head": "头", "Hand": "手", "Leg": "腿", "Eye": "眼睛", "Ear": "耳朵",
+        
+        "Sun": "太阳", "Moon": "月亮", "Star": "星星", "Rain": "雨", "Tree": "树",
+        
+        "How are you": "你好吗", "What is your name": "你叫什么名字",
+        "I am fine": "我很好", "Nice to meet you": "很高兴认识你",
+        "See you later": "再见", "Take care": "保重",
+        "Good luck": "祝你好运", "Congratulations": "恭喜",
+        "I love you": "我爱你", "I miss you": "我想你"
+      }
+    };
+
+    // Dictionary words (150+ words and phrases)
+    const dictionaryWords = [
+      // Greetings
+      "Hello", "Good morning", "Good afternoon", "Good evening", "Good night",
+      "How are you", "I am fine", "Thank you", "Please", "Sorry", "Excuse me",
+      "Yes", "No", "Maybe", "Welcome", "Goodbye",
+      
+      // Daily Greetings
+      "What is your name", "My name is", "Nice to meet you", "How was your day",
+      "Have a nice day", "See you later", "See you tomorrow", "Take care",
+      "Good luck", "Congratulations", "You're welcome", "No problem",
+      
+      // Habitual Sentences
+      "I wake up at 6 AM", "I brush my teeth", "I take a shower", "I have breakfast",
+      "I go to work", "I go to school", "I am getting ready", "I am leaving now",
+      "I will be late", "I am on my way", "I reached home", "I am tired",
+      "I am hungry", "I am thirsty", "Let's eat", "The food is delicious",
+      "I am full", "I need rest", "I am going to sleep", "Good night, sweet dreams",
+      
+      // Questions & Responses
+      "Where are you going", "What are you doing", "Did you eat", "Are you free",
+      "Can you help me", "I need help", "I don't know", "I understand",
+      "I don't understand", "Please repeat", "Speak slowly please", "What does this mean",
+      
+      // Shopping
+      "How much does it cost", "It's expensive", "It's cheap", "I want to buy",
+      "Do you have", "Give me", "I will take this", "Keep the change",
+      
+      // Time & Days
+      "What time is it", "It's 10 o'clock", "Today", "Tomorrow", "Yesterday",
+      "Morning", "Afternoon", "Evening", "Night",
+      "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+      
+      // Numbers
+      "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+      
+      // Family
+      "Mother", "Father", "Brother", "Sister", "Son", "Daughter",
+      "Family", "Friend", "Husband", "Wife", "Grandfather", "Grandmother",
+      
+      // Common Objects
+      "Water", "Food", "Tea", "Coffee", "Milk", "Rice", "Bread",
+      "House", "Door", "Window", "Room", "Book", "Pen", "Phone", "Car",
+      "Bike", "Bag", "Money", "Clothes",
+      
+      // Places
+      "School", "College", "Hospital", "Temple", "Mosque", "Church",
+      "Market", "Shop", "Office", "Home", "City", "Village",
+      "Bank", "Post office", "Restaurant",
+      
+      // Actions
+      "Go", "Come", "Eat", "Drink", "Sleep", "Wake up", "Sit", "Stand",
+      "Walk", "Run", "Work", "Study", "Play", "Read", "Write",
+      "Talk", "Listen", "See", "Watch", "Wait", "Stop",
+      
+      // Descriptions
+      "Teacher", "Student", "Doctor", "Love", "Peace", "Happy", "Sad",
+      "Good", "Bad", "Big", "Small", "Hot", "Cold", "New", "Old",
+      
+      // Colors
+      "Red", "Blue", "Green", "Yellow", "White", "Black", "Orange", "Pink",
+      
+      // Body Parts
+      "Head", "Hair", "Face", "Eye", "Ear", "Nose", "Mouth", "Hand", "Leg", "Foot",
+      
+      // Nature
+      "Sun", "Moon", "Star", "Sky", "Rain", "Wind", "Cloud",
+      "Tree", "Flower", "River", "Mountain",
+      
+      // Questions
+      "What", "Where", "When", "Who", "Why", "How", "How much", "How many",
+      
+      // Emotions
+      "I love you", "I miss you", "I am sorry", "Don't worry",
+      "Be careful", "It's okay", "No worries", "That's great"
+    ];
+
+    function openModal(modalId) {
+      document.getElementById(modalId).classList.add('active');
+      document.body.style.overflow = 'hidden';
+      if (modalId === 'translatorModal') {
+        loadPhrases();
+      } else if (modalId === 'dictionaryModal') {
+        const dictionaryList = document.getElementById('dictionaryList');
+        dictionaryList.innerHTML = '<p class="text-center text-gray-500 py-8">Enter a word to search in the dictionary</p>';
+      }
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.remove('active');
+      document.body.style.overflow = 'auto';
+      stopTTS();
+    }
+
+    // Text to Speech Functions
+    function speakTTS() {
+      const text = document.getElementById('ttsText').value.trim();
+      if (!text) { showMessage('Please enter text'); return; }
+      if (!synth) { showMessage('Speech synthesis not supported in this browser'); return; }
+      const lang = document.getElementById('ttsLang').value;
+      const rate = parseFloat(document.getElementById('ttsRate').value);
+      stopTTS();
+      try {
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.lang = lang;
+        currentUtterance.rate = rate;
+        synth.speak(currentUtterance);
+      } catch(e) { showMessage('Speech error: ' + e.message); console.error(e); }
+    }
+
+    function stopTTS() {
+      if (synth) { try { synth.cancel(); } catch(e) { console.warn('TTS cancel error:', e); } }
+    }
+
+    // OCR Functions
+    function processImage() {
+      const fileInput = document.getElementById('imageUpload');
+      const file = fileInput.files[0];
+      
+      if (!file) return;
+      
+      if (!file.type.startsWith('image/')) {
+        showMessage('Please select a valid image file');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('previewImg').src = e.target.result;
+        document.getElementById('imagePreview').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+      
+      document.getElementById('ocrLoading').classList.remove('hidden');
+      document.getElementById('ocrText').value = '';
+      
+      Tesseract.recognize(
+        file,
+        'eng+hin+tel+tam+kan',
+        {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              const progress = Math.round(m.progress * 100);
+              document.getElementById('ocrLoading').innerHTML = `
+                <div class="loading-spinner"></div>
+                <p class="text-center text-gray-600 text-sm md:text-base">Processing image... ${progress}%</p>
+              `;
+            }
+          }
+        }
+      ).then(({ data: { text } }) => {
+        document.getElementById('ocrLoading').classList.add('hidden');
+        document.getElementById('ocrLoading').innerHTML = `
+          <div class="loading-spinner"></div>
+          <p class="text-center text-gray-600 text-sm md:text-base">Processing image...</p>
+        `;
+        
+        if (text.trim()) {
+          document.getElementById('ocrText').value = text;
+          showMessage('Text extracted successfully!');
+        } else {
+          document.getElementById('ocrText').value = 'No text found in image. Please try another image with clear text.';
+          showMessage('No text detected in image');
+        }
+      }).catch(err => {
+        document.getElementById('ocrLoading').classList.add('hidden');
+        document.getElementById('ocrLoading').innerHTML = `
+          <div class="loading-spinner"></div>
+          <p class="text-center text-gray-600 text-sm md:text-base">Processing image...</p>
+        `;
+        document.getElementById('ocrText').value = 'Error processing image. Please try again with a clearer image.';
+        showMessage('Error processing image. Try a clearer photo.');
+        console.error(err);
+      });
+    }
+
+    function speakOCR() {
+      const text = document.getElementById('ocrText').value.trim();
+      if (!text) { showMessage('No text to speak'); return; }
+      if (!synth) { showMessage('Speech synthesis not supported in this browser'); return; }
+      const lang = document.getElementById('ocrLang').value;
+      stopTTS();
+      try {
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.lang = lang;
+        synth.speak(currentUtterance);
+      } catch(e) { showMessage('Speech error: ' + e.message); console.error(e); }
+    }
+
+    // Voice Recognition Functions
+    function initVoiceRecognition() {
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+        
+        recognition.onstart = function() {
+          console.log('Speech recognition started');
+          document.getElementById('voiceStatus').textContent = '🎤 Listening... Speak now!';
+          document.getElementById('voiceBtn').classList.add('recording');
+        };
+        
+        recognition.onresult = function(event) {
+          let finalTranscript = '';
+          let interimTranscript = '';
+          
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + ' ';
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+          
+          if (finalTranscript) {
+            const currentText = document.getElementById('voiceText').value;
+            document.getElementById('voiceText').value = currentText + finalTranscript;
+          }
+          
+          if (interimTranscript) {
+            document.getElementById('voiceStatus').textContent = '🎤 ' + interimTranscript;
+          }
+        };
+        
+        recognition.onerror = function(event) {
+          console.error('Speech recognition error:', event.error);
+          
+          let errorMessage = 'Error: ';
+          switch(event.error) {
+            case 'no-speech':
+              errorMessage += 'No speech detected. Please try again.';
+              break;
+            case 'audio-capture':
+              errorMessage += 'Microphone not found or blocked.';
+              break;
+            case 'not-allowed':
+              errorMessage += 'Microphone permission denied.';
+              break;
+            case 'network':
+              errorMessage += 'Network error. Check your connection.';
+              break;
+            default:
+              errorMessage += event.error;
+          }
+          
+          showMessage(errorMessage);
+          stopVoiceRecording();
+        };
+        
+        recognition.onend = function() {
+          console.log('Speech recognition ended');
+          if (isRecording) {
+            try {
+              recognition.start();
+            } catch(e) {
+              console.log('Could not restart:', e);
+              stopVoiceRecording();
+            }
+          } else {
+            stopVoiceRecording();
+          }
+        };
+        
+        return true;
+      } else {
+        showMessage('Speech recognition not supported in this browser. Try Chrome or Edge.');
+        return false;
+      }
+    }
+
+    function toggleVoiceRecording() {
+      if (isRecording) {
+        stopVoiceRecording();
+      } else {
+        startVoiceRecording();
+      }
+    }
+
+    function startVoiceRecording() {
+      if (!recognition) {
+        if (!initVoiceRecognition()) {
+          return;
+        }
+      }
+      
+      try {
+        const lang = document.getElementById('voiceLang').value;
+        recognition.lang = lang;
+        
+        isRecording = true;
+        recognition.start();
+        
+        document.getElementById('voiceBtn').innerHTML = '<i class="fas fa-stop mr-2 text-xl md:text-2xl"></i> Stop Recording';
+        document.getElementById('voiceBtn').classList.remove('btn-primary');
+        document.getElementById('voiceBtn').classList.add('btn-secondary');
+        
+        showMessage('Voice recording started!');
+      } catch(e) {
+        console.error('Error starting recognition:', e);
+        showMessage('Could not start recording. Please try again.');
+        stopVoiceRecording();
+      }
+    }
+
+    function stopVoiceRecording() {
+      isRecording = false;
+      
+      if (recognition) {
+        try {
+          recognition.stop();
+        } catch(e) {
+          console.log('Recognition already stopped');
+        }
+      }
+      
+      document.getElementById('voiceStatus').textContent = 'Recording stopped';
+      document.getElementById('voiceBtn').innerHTML = '<i class="fas fa-microphone mr-2 text-xl md:text-2xl"></i> Start Recording';
+      document.getElementById('voiceBtn').classList.remove('recording', 'btn-secondary');
+      document.getElementById('voiceBtn').classList.add('btn-primary');
+      
+      setTimeout(() => {
+        document.getElementById('voiceStatus').textContent = '';
+      }, 2000);
+    }
+
+    function clearVoiceText() {
+      document.getElementById('voiceText').value = '';
+    }
+
+    function copyVoiceText() {
+      const text = document.getElementById('voiceText').value;
+      navigator.clipboard.writeText(text).then(() => {
+        showMessage('Text copied to clipboard');
+      });
+    }
+
+    // Translation Functions
+    function translateText() {
+      const inputText = document.getElementById('inputText').value.trim();
+      if (!inputText) {
+        showMessage('Please enter text to translate');
+        return;
+      }
+      
+      const fromLang = document.getElementById('fromLang').value;
+      const toLang = document.getElementById('toLang').value;
+      
+      if (fromLang === toLang) {
+        showMessage('Please select different languages');
+        return;
+      }
+      
+      const translated = translationDB[toLang][inputText] || 
+                        `Translation for "${inputText}" not found in database`;
+      
+      document.getElementById('translationResult').textContent = translated;
+    }
+
+    function speakTranslation() {
+      const text = document.getElementById('translationResult').textContent;
+      if (!text || text === 'Translation will appear here...') { showMessage('No translation to speak'); return; }
+      if (!synth) { showMessage('Speech synthesis not supported in this browser'); return; }
+      const toLang = document.getElementById('toLang').value;
+      const langMap = {
+        'en': 'en-US', 'hi': 'hi-IN', 'te': 'te-IN', 'ta': 'ta-IN', 'kn': 'kn-IN',
+        'es': 'es-ES', 'fr': 'fr-FR', 'de': 'de-DE', 'ja': 'ja-JP', 'zh': 'zh-CN'
+      };
+      stopTTS();
+      try {
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.lang = langMap[toLang] || 'en-US';
+        synth.speak(currentUtterance);
+      } catch(e) { showMessage('Speech error: ' + e.message); console.error(e); }
+    }
+
+    function loadPhrases() {
+      const phrasesList = document.getElementById('phrasesList');
+      phrasesList.innerHTML = '';
+      
+      const fromLang = document.getElementById('fromLang').value;
+      const toLang = document.getElementById('toLang').value;
+      
+      Object.keys(translationDB[fromLang]).forEach(phrase => {
+        const translation = translationDB[toLang][phrase];
+        const phraseItem = document.createElement('div');
+        phraseItem.className = 'word-item bg-white p-3 md:p-4 rounded-lg border-2 border-gray-200 cursor-pointer';
+        phraseItem.innerHTML = `
+          <div class="flex justify-between items-center">
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800 text-sm md:text-base">${phrase}</p>
+              <p class="text-gray-600 text-xs md:text-sm" style="user-select: none; -webkit-user-select: none;">${translation}</p>
+            </div>
+            <button onclick="speakPhrase('${translation}', '${toLang}')" class="ml-2 bg-purple-500 text-white p-2 rounded-full hover:bg-purple-600">
+              <i class="fas fa-volume-up text-sm md:text-base"></i>
+            </button>
+          </div>
+        `;
+        phrasesList.appendChild(phraseItem);
+      });
+    }
+
+    function speakPhrase(text, lang) {
+      if (event) event.stopPropagation();
+      if (!synth) { showMessage('Speech synthesis not supported in this browser'); return; }
+      const langMap = {
+        'en': 'en-US', 'hi': 'hi-IN', 'te': 'te-IN', 'ta': 'ta-IN', 'kn': 'kn-IN',
+        'es': 'es-ES', 'fr': 'fr-FR', 'de': 'de-DE', 'ja': 'ja-JP', 'zh': 'zh-CN'
+      };
+      stopTTS();
+      try {
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.lang = langMap[lang] || 'en-US';
+        synth.speak(currentUtterance);
+      } catch(e) { showMessage('Speech error: ' + e.message); console.error(e); }
+    }
+
+    // Dictionary Functions
+    function updateDictionary() {
+      filterDictionary();
+    }
+
+    function speakWord(text, lang) {
+      if (!synth) { showMessage('Speech synthesis not supported in this browser'); return; }
+      stopTTS();
+      try {
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.lang = lang;
+        synth.speak(currentUtterance);
+      } catch(e) { showMessage('Speech error: ' + e.message); console.error(e); }
+    }
+
+    function filterDictionary() {
+      const searchTerm = document.getElementById('searchWord').value.trim();
+      
+      if (!searchTerm) {
+        const dictionaryList = document.getElementById('dictionaryList');
+        dictionaryList.innerHTML = '<p class="text-center text-gray-500 py-8">Enter a word to search in the dictionary</p>';
+        return;
+      }
+      
+      const dictLang = document.getElementById('dictLang').value;
+      const langCode = dictLang.split('-')[0];
+      const dictionaryList = document.getElementById('dictionaryList');
+      
+      const searchLower = searchTerm.toLowerCase();
+      const matchedWords = dictionaryWords.filter(word => 
+        word.toLowerCase().includes(searchLower)
+      );
+      
+      if (matchedWords.length === 0) {
+        dictionaryList.innerHTML = '<p class="text-center text-gray-500 py-4">No matches found. Try another word.</p>';
+        return;
+      }
+      
+      dictionaryList.innerHTML = '';
+      
+      matchedWords.forEach(word => {
+        const translation = translationDB[langCode][word];
+        
+        if (!translation) {
+          return;
+        }
+        
+        const safeTranslation = translation.replace(/'/g, "\\'");
+        
+        const wordItem = document.createElement('div');
+        wordItem.className = 'word-item bg-white p-3 md:p-4 rounded-lg border-2 border-gray-200';
+        wordItem.innerHTML = `
+          <div class="flex justify-between items-center">
+            <div class="flex-1">
+              <p class="font-semibold text-gray-800 text-sm md:text-base">${word}</p>
+              <p class="text-gray-600 text-xs md:text-sm">${translation}</p>
+            </div>
+            <button onclick="speakWord('${safeTranslation}', '${dictLang}')" class="ml-2 bg-purple-500 text-white p-2 rounded-full hover:bg-purple-600">
+              <i class="fas fa-volume-up text-sm md:text-base"></i>
+            </button>
+          </div>
+        `;
+        dictionaryList.appendChild(wordItem);
+      });
+    }
+
+    // Paragraph Translation Functions
+    async function translateParagraph() {
+      const text = document.getElementById('paragraphInput').value.trim();
+      if (!text) {
+        showMessage('Please enter text to translate');
+        return;
+      }
+      
+      const fromLang = document.getElementById('paraFromLang').value;
+      const toLang = document.getElementById('paraToLang').value;
+      
+      if (fromLang === toLang) {
+        showMessage('Please select different languages');
+        return;
+      }
+      
+      document.getElementById('paragraphLoading').classList.remove('hidden');
+      document.getElementById('paragraphOutput').textContent = 'Translating...';
+      
+      try {
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${fromLang}|${toLang}`;
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        document.getElementById('paragraphLoading').classList.add('hidden');
+        
+        if (data.responseStatus === 200 && data.responseData) {
+          document.getElementById('paragraphOutput').textContent = data.responseData.translatedText;
+        } else {
+          document.getElementById('paragraphOutput').textContent = 'Translation failed. Please try again.';
+          showMessage('Translation failed');
+        }
+      } catch (error) {
+        document.getElementById('paragraphLoading').classList.add('hidden');
+        document.getElementById('paragraphOutput').textContent = 'Error connecting to translation service.';
+        showMessage('Translation error');
+        console.error(error);
+      }
+    }
+
+    function speakParagraph() {
+      const text = document.getElementById('paragraphOutput').textContent;
+      if (!text || text === 'Translation will appear here...' || text === 'Translating...') {
+        showMessage('No translation to speak'); return;
+      }
+      if (!synth) { showMessage('Speech synthesis not supported in this browser'); return; }
+      const toLang = document.getElementById('paraToLang').value;
+      const langMap = {
+        'en': 'en-US', 'hi': 'hi-IN', 'te': 'te-IN', 'ta': 'ta-IN', 'kn': 'kn-IN',
+        'es': 'es-ES', 'fr': 'fr-FR', 'de': 'de-DE', 'ja': 'ja-JP', 'zh': 'zh-CN'
+      };
+      stopTTS();
+      try {
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.lang = langMap[toLang] || 'en-US';
+        synth.speak(currentUtterance);
+      } catch(e) { showMessage('Speech error: ' + e.message); console.error(e); }
+    }
+
+    function showMessage(message) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'fixed top-4 right-4 bg-purple-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 text-sm md:text-base';
+      messageDiv.textContent = message;
+      document.body.appendChild(messageDiv);
+      
+      setTimeout(() => {
+        messageDiv.remove();
+      }, 3000);
+    }
+
+    // Element SDK Implementation
+    async function onConfigChange(config) {
+      document.getElementById('appTitle').textContent = config.app_title || defaultConfig.app_title;
+      document.getElementById('ocrSectionTitle').textContent = config.ocr_section_title || defaultConfig.ocr_section_title;
+      document.getElementById('ttsSectionTitle').textContent = config.tts_section_title || defaultConfig.tts_section_title;
+      document.getElementById('voiceSectionTitle').textContent = config.voice_section_title || defaultConfig.voice_section_title;
+      document.getElementById('translationSectionTitle').textContent = config.translation_section_title || defaultConfig.translation_section_title;
+      document.getElementById('paragraphSectionTitle').textContent = config.paragraph_section_title || defaultConfig.paragraph_section_title;
+      document.getElementById('dictionarySectionTitle').textContent = config.dictionary_section_title || defaultConfig.dictionary_section_title;
+      document.getElementById('typingSectionTitle').textContent = config.typing_section_title || defaultConfig.typing_section_title;
+    }
+
+    function mapToCapabilities(config) {
+      return {
+        recolorables: [],
+        borderables: [],
+        fontEditable: undefined,
+        fontSizeable: undefined
+      };
+    }
+
+    function mapToEditPanelValues(config) {
+      return new Map([
+        ["app_title", config.app_title || defaultConfig.app_title],
+        ["ocr_section_title", config.ocr_section_title || defaultConfig.ocr_section_title],
+        ["tts_section_title", config.tts_section_title || defaultConfig.tts_section_title],
+        ["voice_section_title", config.voice_section_title || defaultConfig.voice_section_title],
+        ["translation_section_title", config.translation_section_title || defaultConfig.translation_section_title],
+        ["paragraph_section_title", config.paragraph_section_title || defaultConfig.paragraph_section_title],
+        ["dictionary_section_title", config.dictionary_section_title || defaultConfig.dictionary_section_title],
+        ["typing_section_title", config.typing_section_title || defaultConfig.typing_section_title]
+      ]);
+    }
+
+    // Initialize SDK
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities,
+        mapToEditPanelValues
+      });
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.elementSdk && window.elementSdk.config) {
+        onConfigChange(window.elementSdk.config);
+      }
+    });
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9bd65297e7a547df',t:'MTc2ODMyMjI5Mi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
